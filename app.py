@@ -96,9 +96,8 @@ if st.button("處理檔案") and sales_file and zsdc_file:
         df_zsdc['key'] = df_zsdc['文件'].astype(str) + '_' + df_zsdc['項目'].astype(str)
         # 處理zsdc重複key（取第一個）
         df_zsdc = df_zsdc.drop_duplicates(subset='key', keep='first')
-        # mapping zsdc 欄位
-        mapping_dict = df_zsdc.set_index('key')[['物料', '物料說明', '淨重']].to_dict(orient='index')
-        df_combined['物料'] = df_combined['key'].apply(lambda k: mapping_dict.get(k, {}).get('物料', ''))
+        # 移除物料，只 mapping 品名和單位用銅
+        mapping_dict = df_zsdc.set_index('key')[['物料說明', '淨重']].to_dict(orient='index')
         df_combined['品名'] = df_combined['key'].apply(lambda k: mapping_dict.get(k, {}).get('物料說明', ''))
         df_combined['單位用銅'] = df_combined['key'].apply(lambda k: mapping_dict.get(k, {}).get('淨重', ''))
         # 客戶名稱 mapping 用銷售文件 mapping zsdc 先前文件
@@ -253,3 +252,4 @@ if st.button("處理檔案") and sales_file and zsdc_file:
         )
     except Exception as e:
         st.error(f"錯誤：{str(e)}。請檢查檔案格式是否正確。")
+
