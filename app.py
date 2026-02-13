@@ -9,6 +9,7 @@ returns_file = st.file_uploader("41700000 銷貨退回 (選填)", type="xlsx")
 zsdc_file = st.file_uploader("zsdc", type="xlsx")
 contract_file = st.file_uploader("合約管理", type="xlsx")
 product_file = st.file_uploader("產品群", type="xlsx")
+quote_file = st.file_uploader("報價資訊 (選填)", type="xlsx")
 # 讓使用者設定月份（預設系統當月）
 current_month = datetime.datetime.now().month
 month = st.number_input("設定月份 (預設當月)", min_value=1, max_value=12, value=current_month)
@@ -61,6 +62,11 @@ if st.button("處理檔案") and sales_file and zsdc_file:
             df_product = pd.read_excel(product_file, sheet_name='工作表1')
         else:
             df_product = pd.DataFrame()
+        # 如果有報價資訊檔案，讀取
+        if quote_file:
+            df_quote = pd.read_excel(quote_file, sheet_name='工作表1')
+        else:
+            df_quote = pd.DataFrame()
         # 篩選銷貨收入和銷貨退回的輸入日期 (L欄: 輸入日期)
         df_sales['輸入日期'] = pd.to_datetime(df_sales['輸入日期'], errors='coerce')
         df_sales = df_sales[(df_sales['輸入日期'] >= pd.to_datetime(start_date)) & (df_sales['輸入日期'] <= pd.to_datetime(end_date))]
@@ -96,7 +102,7 @@ if st.button("處理檔案") and sales_file and zsdc_file:
         df_zsdc['key'] = df_zsdc['文件'].astype(str) + '_' + df_zsdc['項目'].astype(str)
         # 處理zsdc重複key（取第一個）
         df_zsdc = df_zsdc.drop_duplicates(subset='key', keep='first')
-        # 移除物料，只 mapping 品名和單位用銅
+        # mapping zsdc 欄位（只取品名和單位用銅，物料保留銷貨收入/退回原始值）
         mapping_dict = df_zsdc.set_index('key')[['物料說明', '淨重']].to_dict(orient='index')
         df_combined['品名'] = df_combined['key'].apply(lambda k: mapping_dict.get(k, {}).get('物料說明', ''))
         df_combined['單位用銅'] = df_combined['key'].apply(lambda k: mapping_dict.get(k, {}).get('淨重', ''))
@@ -119,7 +125,7 @@ if st.button("處理檔案") and sales_file and zsdc_file:
             # 處理合約重複key
             df_contract = df_contract.drop_duplicates(subset='合約編號', keep='first')
             contract_mapping = df_contract.set_index('合約編號')[['產品部', '通路', '部門', '報價單號', '匯率', '業務', '報價銅價']].to_dict(orient='index')
-            # 修改1: 產品部 mapping 到 線種，產品群留空
+            # 產品部 mapping 到 線種，產品群留空
             df_combined['線種'] = df_combined['合約號碼'].apply(lambda k: contract_mapping.get(k, {}).get('產品部', ''))
             df_combined['產品群'] = ''
             df_combined['通路'] = df_combined['合約號碼'].apply(lambda k: contract_mapping.get(k, {}).get('通路', ''))
@@ -128,9 +134,9 @@ if st.button("處理檔案") and sales_file and zsdc_file:
             df_combined['匯率'] = df_combined['合約號碼'].apply(lambda k: contract_mapping.get(k, {}).get('匯率', ''))
             df_combined['業務員'] = df_combined['合約號碼'].apply(lambda k: contract_mapping.get(k, {}).get('業務', ''))
             df_combined['報價銅'] = df_combined['合約號碼'].apply(lambda k: contract_mapping.get(k, {}).get('報價銅價', ''))
-            # 修改1: 線種內容替換
+            # 線種內容替換
             df_combined['線種'] = df_combined['線種'].replace({'銅通信電纜': '通信', '光通信電纜': '通信'})
-            # 修改2: 通路內容替換
+            # 通路內容替換
             df_combined['通路'] = df_combined['通路'].replace({
                 '電力': '經銷長約',
                 '經銷專案-特定': '經銷專案',
@@ -154,6 +160,20 @@ if st.button("處理檔案") and sales_file and zsdc_file:
             df_product = df_product.drop_duplicates(subset='料號', keep='first')
             product_mapping = df_product.set_index('料號')['產品群'].to_dict()
             df_combined['產品群'] = df_combined['物料'].map(product_mapping).fillna('')
+        # 如果有報價資訊檔案，覆寫報價銅和匯率
+        if not df_quote.empty:
+            df_quote['合約編號'] = df_quote['合約編號'].astype(str)
+            df_combined['合約號碼'] = df_combined['合約號碼'].astype(str)
+            df_quote = df_quote.drop_duplicates(subset='合約編號', keep='first')
+            quote_mapping = df_quote.set_index('合約編號')[['銅價+銅價調整', '匯率']].to_dict(orient='index')
+            # 有對到的覆寫，沒對到的保留原值
+            quote_copper = df_combined['合約號碼'].apply(lambda k: quote_mapping.get(k, {}).get('銅價+銅價調整', None))
+            quote_rate = df_combined['合約號碼'].apply(lambda k: quote_mapping.get(k, {}).get('匯率', None))
+            df_combined['報價銅'] = quote_copper.where(quote_copper.notna(), df_combined.get('報價銅', ''))
+            df_combined['匯率'] = quote_rate.where(quote_rate.notna(), df_combined.get('匯率', ''))
+            # 覆寫後重新計算報價銅成本
+            df_combined['報價銅'] = pd.to_numeric(df_combined['報價銅'], errors='coerce').fillna(0)
+            df_combined['報價銅成本'] = df_combined['報價銅'] * df_combined['銅量']
         # 新增分類邏輯
         df_combined['分類'] = ''
         mask = df_combined['分類'] == ''
@@ -189,13 +209,13 @@ if st.button("處理檔案") and sales_file and zsdc_file:
         mask = df_combined['分類'] == ''
         df_combined.loc[mask & (df_combined['線種'] == '通信'), '分類'] = '通信'
 
-        # 新增訂單月邏輯（移到這裡，確保在填報價銅前執行）
+        # 新增訂單月邏輯
         def extract_mm(po):
             if isinstance(po, str) and '-1=Y' in po:
                 po = po.replace(' ', '')  # 移除空格，提高格式彈性
                 if '-1=Y' in po:
                     try:
-                        mm_part = po.split('-1=Y')[0][-2:]  # 取最後兩個字符作為 mm（處理單/雙位數）
+                        mm_part = po.split('-1=Y')[0][-2:]  # 取最後兩個字符作為 mm
                         mm = int(mm_part)
                         if 1 <= mm <= 12:
                             return f"{mm:02d}"  # 返回字串
@@ -252,4 +272,3 @@ if st.button("處理檔案") and sales_file and zsdc_file:
         )
     except Exception as e:
         st.error(f"錯誤：{str(e)}。請檢查檔案格式是否正確。")
-
