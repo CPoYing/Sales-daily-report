@@ -122,6 +122,11 @@ with tab_daily:
                 df_product = df_product.drop_duplicates(subset='料號', keep='first')
                 product_mapping = df_product.set_index('料號')['產品群'].to_dict()
                 df_combined['產品群'] = df_combined['物料'].map(product_mapping).fillna('')
+                # 品名為空時（如銷貨退回），從產品群檔案補品名
+                if '品名' in df_product.columns:
+                    product_name_mapping = df_product.set_index('料號')['品名'].to_dict()
+                    empty_mask = df_combined['品名'] == ''
+                    df_combined.loc[empty_mask, '品名'] = df_combined.loc[empty_mask, '物料'].map(product_name_mapping).fillna('')
 
             # 分類邏輯
             df_combined['分類'] = ''
