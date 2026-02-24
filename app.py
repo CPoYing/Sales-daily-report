@@ -180,7 +180,7 @@ with tab_daily:
                 'sales_item': '銷售項目',
             })
             df_combined['過帳日期'] = pd.to_datetime(df_combined['過帳日期'], errors='coerce').dt.strftime('%Y/%m/%d')
-            output_cols = ['文件(Billing號)', '物料', '品名', '產品群', '工廠', '線種', '課別', '通路', '客戶', '客戶名稱', '銷售文件', '銷售項目', 'billing項目', '以 PCLC 計', '數量', '過帳日期', 'BUn', '單位用銅', '銅量', '合約號碼', '採購單', '分類', '報價單號', '報價銅', '報價銅成本', '匯率', '訂單月', '業務員']
+            output_cols = ['文件(Billing號)', '物料', '品名', '產品群', '工廠', '線種', '課別', '通路', '客戶', '客戶名稱', '銷售文件', '銷售項目', 'billing項目', '以 PCLC 計', '數量', '過帳日期', 'BUn', '單位用銅', '銅量', '合約號碼', '採購單', '分類', '訂單月', '報價銅', '報價銅成本', '匯率', '報價單號', '業務員']
             for col in output_cols:
                 if col not in df_combined.columns:
                     df_combined[col] = ''
