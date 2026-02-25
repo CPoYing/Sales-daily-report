@@ -111,7 +111,10 @@ with tab_daily:
                     '經銷專案-特開': '經銷專案',
                     '經銷專案-新商模': '經銷專案',
                     '經銷專案-綠能電力': '經銷專案',
-                    '經銷專案-類長約': '經銷專案'
+                    '經銷專案-類長約': '經銷專案',
+                    '電力專案-類長約': '經銷專案',
+                    '通信專案': '民間通信',
+                    '通信': '民間通信',
                 })
                 df_combined['報價銅'] = pd.to_numeric(df_combined['報價銅'], errors='coerce').fillna(0)
                 df_combined['報價銅成本'] = df_combined['報價銅'] * df_combined['銅量']
@@ -141,7 +144,7 @@ with tab_daily:
                             mm = int(mm_part)
                             if mm == current_month:
                                 return "經銷長約(M-1)"
-                            elif mm < current_month:
+                            else:
                                 return "經銷長約(M-2)"
                         except ValueError:
                             pass
@@ -153,7 +156,9 @@ with tab_daily:
             mask = df_combined['分類'] == ''
             df_combined.loc[mask & ((df_combined['課別'] == '民電業務部/營業一課') | (df_combined['課別'] == '民電業務部/營業三課')), '分類'] = '民電'
             mask = df_combined['分類'] == ''
-            df_combined.loc[mask & ((df_combined['課別'] == '公電業務部/營業一課') | (df_combined['課別'] == '公電業務部/營業二課')), '分類'] = '公電'
+            公電_mask = mask & ((df_combined['課別'] == '公電業務部/營業一課') | (df_combined['課別'] == '公電業務部/營業二課'))
+            df_combined.loc[公電_mask & (df_combined['工廠'].str.strip() == 'SCDM'), '分類'] = '無'
+            df_combined.loc[公電_mask & (df_combined['工廠'].str.strip() != 'SCDM'), '分類'] = '公電'
             mask = df_combined['分類'] == ''
             df_combined.loc[mask & ((df_combined['課別'].str[:2] == '產業') | (df_combined['課別'].str[:2] == '國際')), '分類'] = '外銷'
             mask = df_combined['分類'] == ''
