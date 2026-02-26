@@ -196,6 +196,7 @@ with tab_daily:
             df_combined.loc[no_zsdc_mask, '報價銅'] = ''
             df_combined.loc[no_zsdc_mask, '報價銅成本'] = ''
             df_combined.loc[no_zsdc_mask, '匯率'] = ''
+            df_combined.loc[no_zsdc_mask, '分類'] = ''
 
             df_combined = df_combined.rename(columns={
                 '參考文件號碼': '文件(Billing號)',
