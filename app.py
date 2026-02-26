@@ -78,6 +78,9 @@ with tab_daily:
             df_combined['品名'] = df_combined['key'].apply(lambda k: mapping_dict.get(k, {}).get('物料說明', ''))
             df_combined['單位用銅'] = df_combined['key'].apply(lambda k: mapping_dict.get(k, {}).get('淨重', ''))
 
+            # 記住沒有 zsdc 對應的行（主要是銷貨退回），後續輸出前清空數值欄位
+            no_zsdc_mask = df_combined['單位用銅'] == ''
+
             sales_doc_dict = df_zsdc.set_index('先前文件')['bill-to-name'].to_dict()
             df_combined['客戶名稱'] = df_combined['銷售文件'].map(sales_doc_dict).fillna('')
             contract_no_dict = df_zsdc.set_index('先前文件')['合約號碼'].to_dict()
@@ -186,6 +189,13 @@ with tab_daily:
 
             df_combined['報價銅'] = pd.to_numeric(df_combined.get('報價銅', 0), errors='coerce').fillna(0)
             df_combined['報價銅成本'] = df_combined['報價銅'] * df_combined['銅量']
+
+            # 沒有 zsdc 對應的行（如銷貨退回），數值欄位清為空值，產品群和品名保留
+            df_combined.loc[no_zsdc_mask, '單位用銅'] = ''
+            df_combined.loc[no_zsdc_mask, '銅量'] = ''
+            df_combined.loc[no_zsdc_mask, '報價銅'] = ''
+            df_combined.loc[no_zsdc_mask, '報價銅成本'] = ''
+            df_combined.loc[no_zsdc_mask, '匯率'] = ''
 
             df_combined = df_combined.rename(columns={
                 '參考文件號碼': '文件(Billing號)',
