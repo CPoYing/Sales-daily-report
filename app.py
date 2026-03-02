@@ -267,12 +267,21 @@ with tab_monthly:
 
     if st.button("處理檔案（月底）", key="btn_monthly") and accumulated_file:
         try:
-            # 讀取累積檔案的 data實績 分頁（標題在第2行）
-            df = pd.read_excel(accumulated_file, sheet_name='data實績', header=1)
-            # 清除欄位名稱前後空格
-            df.columns = df.columns.str.strip()
-            # 移除全空行
-            df = df.dropna(how='all')
+            # 讀取累積檔案的 data實績 分頁（自動偵測標題行）
+            df_raw = pd.read_excel(accumulated_file, sheet_name='data實績', header=None)
+            # 找到包含'合約號碼'的行作為標題
+            header_row = None
+            for i, row in df_raw.iterrows():
+                if '合約號碼' in row.values:
+                    header_row = i
+                    break
+            if header_row is None:
+                st.error("找不到標題行（需包含'合約號碼'欄位），請確認檔案格式。")
+                st.stop()
+            df = df_raw.iloc[header_row+1:].copy()
+            df.columns = df_raw.iloc[header_row].values
+            df.columns = [str(c).strip() for c in df.columns]
+            df = df.dropna(how='all').reset_index(drop=True)
             st.write(f"讀取到 {len(df)} 筆資料，欄位：{list(df.columns)}")
 
             # 報價資訊覆寫報價銅和匯率（有對到才覆寫）
