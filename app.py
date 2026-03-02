@@ -269,6 +269,11 @@ with tab_monthly:
         try:
             # 讀取累積檔案的 data實績 分頁（標題在第2行）
             df = pd.read_excel(accumulated_file, sheet_name='data實績', header=1)
+            # 清除欄位名稱前後空格
+            df.columns = df.columns.str.strip()
+            # 移除全空行
+            df = df.dropna(how='all')
+            st.write(f"讀取到 {len(df)} 筆資料，欄位：{list(df.columns)}")
 
             # 報價資訊覆寫報價銅和匯率（有對到才覆寫）
             if quote_file:
