@@ -233,9 +233,10 @@ with tab_monthly:
     accumulated_file = st.file_uploader("上傳堆疊好的累積檔案", type="xlsx", key="m_accumulated")
     quote_file = st.file_uploader("報價資訊", type="xlsx", key="m_quote")
 
-    current_month_m = datetime.datetime.now().month
-    month_m = st.number_input("設定月份 (預設當月)", min_value=1, max_value=12, value=current_month_m, key="m_month")
-    m1_col1, m1_col2 = st.columns(2)
+    m1_col0, m1_col1, m1_col2 = st.columns(3)
+    with m1_col0:
+        current_month_m = datetime.datetime.now().month
+        month_m = st.number_input("設定月份 (預設當月)", min_value=1, max_value=12, value=current_month_m, key="m_month")
     with m1_col1:
         m1_copper_price = st.number_input("M-1銅價", value=0.00, step=0.01, format="%0.2f", key="m_m1")
     with m1_col2:
