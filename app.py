@@ -235,7 +235,11 @@ with tab_monthly:
 
     current_month_m = datetime.datetime.now().month
     month_m = st.number_input("設定月份 (預設當月)", min_value=1, max_value=12, value=current_month_m, key="m_month")
-    m1_copper_price = st.number_input("M-1銅價", value=0.00, step=0.01, format="%0.2f", key="m_m1")
+    m1_col1, m1_col2 = st.columns(2)
+    with m1_col1:
+        m1_copper_price = st.number_input("M-1銅價", value=0.00, step=0.01, format="%0.2f", key="m_m1")
+    with m1_col2:
+        m1_exchange_rate = st.number_input("M-1匯率", value=0.00, step=0.01, format="%0.2f", key="m_m1_rate")
 
     st.write("M-2銅價組 (可新增多組)")
     if 'm2_groups' not in st.session_state:
@@ -307,6 +311,7 @@ with tab_monthly:
             df['訂單月'] = pd.to_numeric(df.get('訂單月', pd.Series(dtype='float64')), errors='coerce')
 
             df.loc[df['分類'] == "經銷長約(M-1)", '報價銅'] = m1_copper_price
+            df.loc[df['分類'] == "經銷長約(M-1)", '匯率'] = m1_exchange_rate
             mask_m2 = df['分類'] == "經銷長約(M-2)"
             df.loc[mask_m2, '報價銅'] = df.loc[mask_m2, '訂單月'].map(m2_dict).fillna(df.loc[mask_m2, '報價銅'])
             df.loc[mask_m2, '匯率'] = df.loc[mask_m2, '訂單月'].map(m2_rate_dict).fillna(df.loc[mask_m2, '匯率'])
