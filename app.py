@@ -267,34 +267,10 @@ with tab_monthly:
 
     if st.button("處理檔案（月底）", key="btn_monthly") and accumulated_file:
         try:
-            # 讀取累積檔案的 data實績 分頁（自動偵測標題行）
-            df_raw = pd.read_excel(accumulated_file, sheet_name='data實績', header=None)
-            # 找第一個非空值數量 >= 10 的行當標題
-            header_row = None
-            for i, row in df_raw.iterrows():
-                non_null = row.dropna()
-                if len(non_null) >= 10 and all(isinstance(v, str) for v in non_null.values):
-                    header_row = i
-                    break
-            if header_row is None:
-                st.error("找不到標題行，請確認 data實績 分頁格式。")
-                st.stop()
-            df = df_raw.iloc[header_row+1:].copy()
-            df.columns = df_raw.iloc[header_row].values
+            # 讀取累積檔案的 data實績 分頁（前兩行為隱藏行，第三行為標題）
+            df = pd.read_excel(accumulated_file, sheet_name='data實績', header=2)
             df.columns = [str(c).strip() if pd.notna(c) else f'col_{j}' for j, c in enumerate(df.columns)]
             df = df.dropna(how='all').reset_index(drop=True)
-
-            # 用欄位位置對應月底需要的 key 欄位（避免欄位名稱不一致的問題）
-            col_map = {
-                df.columns[18]: '銅量',
-                df.columns[19]: '合約號碼',
-                df.columns[20]: '採購單',
-                df.columns[21]: '分類',
-                df.columns[23]: '報價銅',
-                df.columns[24]: '報價銅成本',
-                df.columns[25]: '匯率',
-            }
-            df = df.rename(columns=col_map)
 
             # 訂單月：如果檔案沒有，從採購單解析
             if '訂單月' not in df.columns:
@@ -311,8 +287,6 @@ with tab_monthly:
                                 pass
                     return None
                 df['訂單月'] = df.loc[df['分類'] == "經銷長約(M-2)", '採購單'].apply(extract_mm)
-
-            st.write(f"讀取到 {len(df)} 筆資料")
 
             # 報價資訊覆寫報價銅和匯率（有對到才覆寫）
             if quote_file:
