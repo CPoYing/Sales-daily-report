@@ -239,13 +239,14 @@ with tab_monthly:
 
     st.write("M-2銅價組 (可新增多組)")
     if 'm2_groups' not in st.session_state:
-        st.session_state.m2_groups = [{'month': current_month_m - 2 if current_month_m > 2 else 10, 'price': 0.00}]
+        st.session_state.m2_groups = [{'month': current_month_m - 2 if current_month_m > 2 else 10, 'price': 0.00, 'rate': 0.00}]
     if st.button("新增 M-2 組", key="btn_add_m2"):
-        st.session_state.m2_groups.append({'month': current_month_m - 2 if current_month_m > 2 else 10, 'price': 0.00})
+        st.session_state.m2_groups.append({'month': current_month_m - 2 if current_month_m > 2 else 10, 'price': 0.00, 'rate': 0.00})
     m2_dict = {}
+    m2_rate_dict = {}
     existing_months = set()
     for i, group in enumerate(st.session_state.m2_groups):
-        col1, col2, col3 = st.columns([2, 2, 1])
+        col1, col2, col3, col4 = st.columns([2, 2, 2, 1])
         with col1:
             new_month = st.number_input(f"M-2月份 {i+1}", min_value=1, max_value=12, value=group['month'], key=f"m2_month_{i}")
             if new_month in existing_months:
@@ -256,15 +257,18 @@ with tab_monthly:
         with col2:
             group['price'] = st.number_input(f"M-2銅價 {i+1}", value=group['price'], step=0.01, format="%0.2f", key=f"m2_price_{i}")
         with col3:
+            group['rate'] = st.number_input(f"M-2匯率 {i+1}", value=group['rate'], step=0.01, format="%0.2f", key=f"m2_rate_{i}")
+        with col4:
             if st.button("刪除", key=f"del_m2_{i}"):
                 del st.session_state.m2_groups[i]
                 st.rerun()
         m2_dict[group['month']] = group['price']
+        m2_rate_dict[group['month']] = group['rate']
 
     if st.button("處理檔案（月底）", key="btn_monthly") and accumulated_file:
         try:
-            # 直接讀取累積檔案，不重新 mapping
-            df = pd.read_excel(accumulated_file)
+            # 讀取累積檔案的 data實績 分頁（標題在第2行）
+            df = pd.read_excel(accumulated_file, sheet_name='data實績', header=1)
 
             # 報價資訊覆寫報價銅和匯率（有對到才覆寫）
             if quote_file:
@@ -279,14 +283,15 @@ with tab_monthly:
                 df['報價銅'] = quote_copper.where(quote_copper.notna(), df['報價銅'])
                 df['匯率'] = quote_rate.where(quote_rate.notna(), df['匯率'])
 
-            # M-1/M-2 銅價覆寫
+            # M-1/M-2 銅價及匯率覆寫
             df['報價銅'] = pd.to_numeric(df['報價銅'], errors='coerce').fillna(0)
             df['銅量'] = pd.to_numeric(df['銅量'], errors='coerce').fillna(0)
-            df['訂單月'] = pd.to_numeric(df['訂單月'], errors='coerce')
+            df['訂單月'] = pd.to_numeric(df.get('訂單月', pd.Series(dtype='float64')), errors='coerce')
 
             df.loc[df['分類'] == "經銷長約(M-1)", '報價銅'] = m1_copper_price
             mask_m2 = df['分類'] == "經銷長約(M-2)"
             df.loc[mask_m2, '報價銅'] = df.loc[mask_m2, '訂單月'].map(m2_dict).fillna(df.loc[mask_m2, '報價銅'])
+            df.loc[mask_m2, '匯率'] = df.loc[mask_m2, '訂單月'].map(m2_rate_dict).fillna(df.loc[mask_m2, '匯率'])
 
             # 重新計算報價銅成本
             df['報價銅'] = pd.to_numeric(df['報價銅'], errors='coerce').fillna(0)
