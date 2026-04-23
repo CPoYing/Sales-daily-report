@@ -32,7 +32,7 @@ with tab_daily:
             else:
                 df_returns = pd.DataFrame()
             if contract_file:
-                df_contract = pd.read_excel(contract_file, sheet_name='工作表1')
+                df_contract = pd.read_excel(contract_file, sheet_name='已篩選')
             else:
                 df_contract = pd.DataFrame()
             if product_file:
