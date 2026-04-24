@@ -105,6 +105,10 @@ with tab_daily:
                 df_combined['業務員'] = df_combined['合約號碼'].apply(lambda k: contract_mapping.get(k, {}).get('業務', ''))
                 df_combined['報價銅'] = df_combined['合約號碼'].apply(lambda k: contract_mapping.get(k, {}).get('報價銅價', ''))
                 df_combined['線種'] = df_combined['線種'].replace({'銅通信電纜': '通信', '光通信電纜': '通信'})
+                # 線種為空值時，依物料開頭判斷
+                empty_line_mask = df_combined['線種'] == ''
+                df_combined.loc[empty_line_mask & df_combined['物料'].astype(str).str.startswith('G'), '線種'] = '電力'
+                df_combined.loc[empty_line_mask & df_combined['物料'].astype(str).str.startswith('6'), '線種'] = '通信'
                 df_combined['通路'] = df_combined['通路'].replace({
                     '電力': '經銷長約',
                     '經銷專案-特定': '經銷專案',
